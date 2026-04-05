@@ -145,17 +145,13 @@ void processInput()
     }
     if (IsKeyPressed(KEY_ONE))
     {
-        gCurrentScene = gMenuScreen;
+        gCurrentScene->changeScene(1);
     }
     if (IsKeyPressed(KEY_TWO))
     {
-        gCurrentScene->changeScene(1);
-    }
-    if (IsKeyPressed(KEY_THREE))
-    {
         gCurrentScene->changeScene(2);
     }
-    if (IsKeyPressed(KEY_FOUR))
+    if (IsKeyPressed(KEY_THREE))
     {
         gCurrentScene->changeScene(3);
     }
