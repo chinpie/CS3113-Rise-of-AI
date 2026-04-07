@@ -8,7 +8,8 @@
  * Academic Misconduct.
  **/
 
-#include "CS3113/LevelC.h"
+#include "CS3113/WinScreen.h"
+#include <string>
 
 // Enums`
 
@@ -16,7 +17,7 @@
 constexpr int SCREEN_WIDTH = 1500,
               SCREEN_HEIGHT = 900,
               FPS = 120,
-              NUMBER_OF_LEVELS = 3;
+              NUMBER_OF_LEVELS = 7;
 
 constexpr char BG_COLOUR[] = "#C0897E";
 constexpr Vector2 ORIGIN = {SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2},
@@ -37,17 +38,21 @@ std::vector<Scene *> gLevels = {};
 LevelA *gLevelA = nullptr;
 LevelB *gLevelB = nullptr;
 LevelC *gLevelC = nullptr;
+LevelD *gLevelD = nullptr;
 MenuScreen *gMenuScreen = nullptr;
+WinScreen *gWinScreen = nullptr;
+GameOverScreen *gGameOverScreen = nullptr;
 
 AppStatus gAppStatus = RUNNING;
 float gPreviousTicks = 0.0f,
-      gTimeAccumulator = 0.0f;
+      gTimeAccumulator = 0.0f,
+      startThrow = GetTime() - 999.0f;
 Camera2D gCamera = {0};
 
 GameState gState;
 
 // Function Declarations
-void switchToScene(Scene *scene);
+void switchToScene(Scene *scene, int lifeCount);
 void initialise();
 void processInput();
 void update();
@@ -75,9 +80,10 @@ void panCamera(Camera2D *camera, const Vector2 *targetPosition)
         Vector2Scale(positionDifference, 0.1f)); // 0.1 = smoothing factor
 }
 
-void switchToScene(Scene *scene)
+void switchToScene(Scene *scene, int lifeCount)
 {
     gCurrentScene = scene;
+    gCurrentScene->setLife(lifeCount);
     gCurrentScene->initialise();
     if (gCurrentScene->getState().pokeTrainer != nullptr)
     {
@@ -91,22 +97,29 @@ void switchToScene(Scene *scene)
 
 void initialise()
 {
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Maps");
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Attack of the Wild Pokemon");
     InitAudioDevice();
-    gMenuScreen = new MenuScreen(ORIGIN, "#C0897E");
+    gMenuScreen = new MenuScreen(ORIGIN, "#27e1cf");
+    gGameOverScreen = new GameOverScreen(ORIGIN, "#000000");
+    gWinScreen = new WinScreen(ORIGIN, "#eeff02");
     gLevelA = new LevelA(ORIGIN, "#C0897E");
     gLevelB = new LevelB(ORIGIN, "#4f1206");
     gLevelC = new LevelC(ORIGIN, "#d6cbc9");
+    gLevelD = new LevelD(ORIGIN, "#c2dc1d8b");
+
     gLevels.push_back(gMenuScreen);
     gLevels.push_back(gLevelA);
     gLevels.push_back(gLevelB);
     gLevels.push_back(gLevelC);
+    gLevels.push_back(gLevelD);
+    gLevels.push_back(gGameOverScreen);
+    gLevels.push_back(gWinScreen);
 
-    switchToScene(gLevels[0]);
+    switchToScene(gLevels[0], 3);
 
     gCamera.offset = ORIGIN;
     gCamera.rotation = 0.0f;
-    gCamera.zoom = 3.5f;
+    gCamera.zoom = 2.0f;
 
     SetTargetFPS(FPS);
 }
@@ -135,25 +148,46 @@ void processInput()
     if (IsKeyPressed(KEY_Q) || WindowShouldClose())
         gAppStatus = TERMINATED;
 
-    if (IsKeyPressed(KEY_E))
+    if (IsKeyPressed(KEY_E) && (GetTime() - startThrow >= 1.0f))
     {
         gCurrentScene->throwPokeBall();
+        startThrow = GetTime();
     }
-    if (gCurrentScene == gMenuScreen && IsKeyPressed(KEY_ENTER))
+    if ((gCurrentScene == gMenuScreen || gCurrentScene == gGameOverScreen || gCurrentScene == gWinScreen) && IsKeyPressed(KEY_ENTER))
     {
+        if (gCurrentScene->getState().pokeTrainer != nullptr)
+        {
+            gCurrentScene->getState().pokeTrainer->setPlayerLives(3);
+        }
         gCurrentScene->changeScene(1);
     }
     if (IsKeyPressed(KEY_ONE))
     {
-        gCurrentScene->changeScene(1);
+        switchToScene(gLevels[0], 3);
     }
     if (IsKeyPressed(KEY_TWO))
     {
-        gCurrentScene->changeScene(2);
+        gCurrentScene->changeScene(1);
     }
     if (IsKeyPressed(KEY_THREE))
     {
+        gCurrentScene->changeScene(2);
+    }
+    if (IsKeyPressed(KEY_FOUR))
+    {
         gCurrentScene->changeScene(3);
+    }
+    if (IsKeyPressed(KEY_FIVE))
+    {
+        gCurrentScene->changeScene(4);
+    }
+    if (IsKeyPressed(KEY_SIX))
+    {
+        gCurrentScene->changeScene(5);
+    }
+    if (IsKeyPressed(KEY_SEVEN))
+    {
+        gCurrentScene->changeScene(6);
     }
 }
 
@@ -180,6 +214,15 @@ void update()
         {
             Vector2 currentPlayerPosition = {gCurrentScene->getState().pokeTrainer->getPosition().x, gCurrentScene->getState().pokeTrainer->getPosition().y};
             panCamera(&gCamera, &currentPlayerPosition);
+
+            if (gCurrentScene->getState().pokeTrainer->getPlayerLives() <= 0)
+            {
+                switchToScene(gLevels[5], 3);
+                return;
+            }
+        }
+
+        {
         }
     }
 }
@@ -190,6 +233,15 @@ void render()
     BeginMode2D(gCamera);
     gCurrentScene->render();
     EndMode2D();
+    std::string curPokeBalls = "Total PokeBalls Remaining: " + std::to_string(gCurrentScene->getState().numPokeBalls);
+    if (gCurrentScene != gMenuScreen && gCurrentScene != gLevelD)
+    {
+        DrawText(curPokeBalls.c_str(), 100.0f, 100.0f, 40, RED);
+    }
+    else if (gCurrentScene == gLevelD)
+    {
+        DrawText("SURVIVE!\nDo not be on the floor when it lands...", 100.0f, 100.0f, 40, RED);
+    }
 
     EndDrawing();
 }
@@ -200,6 +252,8 @@ void shutdown()
     delete gLevelA;
     delete gLevelB;
     delete gLevelC;
+    delete gLevelD;
+    delete gWinScreen;
 
     for (int i = 0; i < NUMBER_OF_LEVELS; i++)
         gLevels[i] = nullptr;
@@ -219,9 +273,9 @@ int main(void)
         if (gCurrentScene->getState().nextSceneID > 0)
         {
             int id = gCurrentScene->getState().nextSceneID;
-            switchToScene(gLevels[id]);
+            int currentLife = gCurrentScene->getState().playerLifeCount;
+            switchToScene(gLevels[id], currentLife);
         }
-
         render();
     }
 

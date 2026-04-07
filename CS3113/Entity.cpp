@@ -140,6 +140,10 @@ void Entity::checkCollisionY(Map *map)
     {
         mPosition.y -= yOverlap; // push up
         mVelocity.y = 0.0f;
+        if (this->mEntityType == POKEBALL && this->mDirection != SPINNING && this->mDirection != CAUGHT)
+        {
+            this->deactivate();
+        }
         mIsCollidingBottom = true;
     }
 }
@@ -195,13 +199,22 @@ bool Entity::isColliding(Entity *other)
 
     if (xDistance < 0.0f && yDistance < 0.0f)
     {
-        if (this->getEntityType() == POKEBALL && other->getEntityType() == NPC)
+        if (this->getEntityType() == POKEBALL && other->getEntityType() == NPC &&
+            (this->mDirection != SPINNING && this->mDirection != CAUGHT))
         {
             other->deactivate();
+            canShake = true;
+            this->setDirection(SPINNING);
+            this->setSpeed(0);
         }
-        else if (this->getEntityType() == PLAYER && other->getEntityType() == NPC)
+        else if (this->getEntityType() == PLAYER && other->getEntityType() == NPC &&
+                 GetTime() - mLastHitTime >= 3.0f)
         {
             playerLives -= 1;
+            Sound tookDamage = LoadSound("assets/game/minecraftdamage.mp3");
+            PlaySound(tookDamage);
+            UnloadSound(tookDamage);
+            mLastHitTime = GetTime();
         }
         return true;
     }
@@ -257,7 +270,91 @@ void Entity::AIFollow(Entity *target)
     }
 }
 
-void Entity::AIActivate(Entity *target)
+void Entity::AILerp(Entity *target, float deltaTime)
+{
+    switch (mAIState)
+    {
+    case IDLE:
+        if (Vector2Distance(mPosition, target->getPosition()) < 140.0f)
+            mAIState = FOLLOWING;
+        break;
+
+    case FOLLOWING:
+    {
+        Vector2 targetPos = target->getPosition();
+        float t = mLerpFactor * deltaTime;
+
+        mPosition.x = mPosition.x + (targetPos.x - mPosition.x) * t;
+        mPosition.y = mPosition.y + (targetPos.y - mPosition.y) * t;
+
+        if (mPosition.x > targetPos.x)
+            setDirection(LEFT);
+        else
+            setDirection(RIGHT);
+        break;
+    }
+
+    default:
+        break;
+    }
+}
+
+void Entity::AIJump(Entity *target, float deltaTime)
+{
+    switch (mAIState)
+    {
+    case IDLE:
+        if (Vector2Distance(mPosition, target->getPosition()) < 140.0f)
+            mAIState = FOLLOWING;
+        break;
+
+    case FOLLOWING:
+    {
+        if (mIsCollidingBottom)
+        {
+            Vector2 targetPos = target->getPosition();
+            if (targetPos.x > mPosition.x)
+            {
+                setDirection(RIGHT);
+                mVelocity.x = 75.0f;
+            }
+            else
+            {
+                setDirection(LEFT);
+                mVelocity.x = -75.0f;
+            }
+            mVelocity.y = -400.0f;
+            mIsCollidingBottom = false;
+        }
+        break;
+    }
+
+    default:
+        break;
+    }
+}
+void Entity::AIHop(float deltaTime, Entity *player)
+{
+    if (mIsCollidingBottom)
+    {
+        mVelocity.x = 0;
+        if (mHasJumped && mIsCollidingBottom && player->isCollidingBottom())
+        {
+            player->setPlayerLives(player->getPlayerLives() - 1);
+            mHasJumped = false;
+        }
+        if (GetRandomValue(1, 100) <= 45)
+        {
+            float jumpingPower = 250.0f + (float)GetRandomValue(50, 400);
+            mVelocity.y = -jumpingPower;
+            mAcceleration.y = (float)GetRandomValue(1, 981);
+            mIsCollidingBottom = false;
+            mHasJumped = true;
+        }
+    }
+}
+
+void Entity::AIActivate(Entity *target, float deltaTime)
 {
     switch (mAIType)
     {
@@ -268,6 +365,15 @@ void Entity::AIActivate(Entity *target)
     case FOLLOWER:
         AIFollow(target);
         break;
+
+    case LERPER:
+        AILerp(target, deltaTime);
+        break;
+    case JUMPER:
+        AIJump(target, deltaTime);
+        break;
+    case HOPPER:
+        AIHop(deltaTime, target);
 
     default:
         break;
@@ -284,17 +390,19 @@ void Entity::update(float deltaTime, Entity *player, Map *map,
         mDirection = IDLING;
         mFrameSpeed = 4;
     }
-    else
+    if (mDirection == SPINNING)
     {
-        mFrameSpeed = 14;
+        mFrameSpeed = 1;
     }
 
     if (mEntityType == NPC)
-        AIActivate(player);
+        AIActivate(player, deltaTime);
 
     resetColliderFlags();
-
-    mVelocity.x = mMovement.x * mSpeed;
+    if (mAIType != JUMPER)
+    {
+        mVelocity.x = mMovement.x * mSpeed;
+    }
 
     mVelocity.x += mAcceleration.x * deltaTime;
     mVelocity.y += mAcceleration.y * deltaTime;

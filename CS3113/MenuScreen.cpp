@@ -17,7 +17,9 @@ void MenuScreen::update(float deltaTime)
 void MenuScreen::render()
 {
     ClearBackground(ColorFromHex(mBGColourHexCode));
-    DrawText("CLICK ENTER TO START", 600, 500, 20, BLUE);
+    DrawText("CLICK ENTER TO START", 600, 400, 20, BLUE);
+    DrawText("Wild Pokemon Have Escaped!\nYour goal is to catch them.", 600, 420, 20, RED);
+    DrawText("\nPress [E] to throw a pokeball.\nBeware you have a limited Amount!", 600, 440, 20, RED);
 }
 
 void MenuScreen::shutdown()

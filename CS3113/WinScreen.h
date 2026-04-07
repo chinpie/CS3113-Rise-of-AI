@@ -1,12 +1,12 @@
-#include "GameOverScreen.h"
+#include "LevelD.h"
 
-class MenuScreen : public Scene
+class WinScreen : public Scene
 {
 private:
 public:
-    MenuScreen();
-    MenuScreen(Vector2 origin, const char *bgHexCode);
-    ~MenuScreen();
+    WinScreen();
+    WinScreen(Vector2 origin, const char *bgHexCode);
+    ~WinScreen();
 
     void initialise() override;
     void update(float deltaTime) override;

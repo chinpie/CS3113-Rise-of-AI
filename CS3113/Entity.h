@@ -10,8 +10,9 @@ enum Direction
     RIGHT,
     DOWN,
     IDLING,
-    SPINNING
-}; // For walking
+    SPINNING,
+    CAUGHT
+}; // For walkings
 enum EntityStatus
 {
     ACTIVE,
@@ -30,7 +31,9 @@ enum AIType
 {
     WANDERER,
     FOLLOWER,
-    LARPER
+    LERPER,
+    JUMPER,
+    HOPPER
 };
 enum AIState
 {
@@ -62,25 +65,29 @@ private:
 
     int mCurrentFrameIndex = 0;
     float mAnimationTime = 0.0f;
+    float mTimer = 0.0f;
+    float mLerpFactor = 2.0f;
+    float mJumpFactor = 5.0f;
 
     bool mIsJumping = false;
     float mJumpingPower = 0.0f;
 
     int mSpeed;
+    float mLastHitTime = GetTime() - 900.0f;
     float mAngle;
 
     bool mIsCollidingTop = false;
     bool mIsCollidingBottom = false;
     bool mIsCollidingRight = false;
     bool mIsCollidingLeft = false;
+    bool canShake = false;
+    bool mHasJumped = true;
 
     EntityStatus mEntityStatus = ACTIVE;
     EntityType mEntityType;
 
     AIType mAIType;
     AIState mAIState;
-
-    bool isColliding(Entity *other);
 
     void checkCollisionY(Entity *collidableEntities, int collisionCheckCount);
     void checkCollisionY(Map *map);
@@ -97,9 +104,12 @@ private:
     }
 
     void animate(float deltaTime);
-    void AIActivate(Entity *target);
+    void AIActivate(Entity *target, float deltaTime);
     void AIWander();
     void AIFollow(Entity *target);
+    void AILerp(Entity *target, float deltaTime);
+    void AIHop(float deltaTime, Entity *player);
+    void AIJump(Entity *target, float deltaTime);
 
 public:
     static constexpr int DEFAULT_SIZE = 250;
@@ -115,6 +125,8 @@ public:
            std::map<Direction, std::vector<int>> animationAtlas,
            EntityType entityType);
     ~Entity();
+
+    bool isColliding(Entity *other);
 
     void update(float deltaTime, Entity *player, Map *map,
                 Entity *collidableEntities, int collisionCheckCount);
@@ -253,6 +265,30 @@ public:
     EntityStatus checkActive()
     {
         return mEntityStatus;
+    }
+    void setTimer(int newTime)
+    {
+        mTimer = newTime;
+    }
+    float getTimer()
+    {
+        return mTimer;
+    }
+    void setLerpFactor(float factor)
+    {
+        mLerpFactor = factor;
+    }
+    float getLerpFactor() const
+    {
+        return mLerpFactor;
+    }
+    bool getCanShake() const
+    {
+        return canShake;
+    }
+    void setCanShake(bool value)
+    {
+        canShake = value;
     }
 };
 

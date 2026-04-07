@@ -1,5 +1,5 @@
 # Source and target
-SRCS = main.cpp CS3113/Entity.cpp CS3113/Map.cpp CS3113/Scene.cpp CS3113/LevelA.cpp CS3113/LevelB.cpp CS3113/MenuScreen.cpp CS3113/LevelC.cpp
+SRCS = main.cpp CS3113/Entity.cpp CS3113/Map.cpp CS3113/Scene.cpp CS3113/LevelA.cpp CS3113/LevelB.cpp CS3113/MenuScreen.cpp CS3113/LevelC.cpp CS3113/LevelD.cpp CS3113/GameOverScreen.cpp CS3113/WinScreen.cpp
 TARGET = raylib_app
 
 # Add the CS3113 library if it exists

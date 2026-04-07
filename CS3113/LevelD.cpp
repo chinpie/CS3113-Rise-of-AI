@@ -1,25 +1,26 @@
-#include "LevelC.h"
+#include "LevelD.h"
 
-LevelC::LevelC() : Scene{{0.0f}, nullptr} {}
-LevelC::LevelC(Vector2 origin, const char *bgHexCode) : Scene{origin, bgHexCode} {}
+LevelD::LevelD() : Scene{{0.0f}, nullptr} {}
+LevelD::LevelD(Vector2 origin, const char *bgHexCode) : Scene{origin, bgHexCode} {}
 
-LevelC::~LevelC() { shutdown(); }
+LevelD::~LevelD() { shutdown(); }
 
-void LevelC::initialise()
+void LevelD::initialise()
 {
-    mGameState.numPokeBalls = 30;
+    mGameState.numPokeBalls = 0;
     mGameState.nextSceneID = 0;
-    mGameState.enemyPokemon = new Entity[ENEMY_COUNT_3];
+    mGameState.enemyPokemon = new Entity[ENEMY_COUNT_4];
     mGameState.pokeBalls.clear();
     mGameState.throwPokeBall = false;
 
-    mGameState.bgm = LoadMusicStream("assets/game/Tine.mp3");
+    mGameState.bgm = LoadMusicStream("assets/game/Oninous.mp3");
     SetMusicVolume(mGameState.bgm, 1.0f);
     PlayMusicStream(mGameState.bgm);
 
     mGameState.jumpSound = LoadSound("assets/game/jump.mp3");
     mGameState.pokeBallShake = LoadSound("assets/game/pokeballshake.mp3");
     mGameState.pokeCatch = LoadSound("assets/game/pokeBallCatch.mp3");
+    levelTimer = GetTime();
 
     /*
        ----------- MAP -----------
@@ -43,7 +44,7 @@ void LevelC::initialise()
         {RIGHT, {2, 3, 4}},
     };
 
-    std::map<Direction, std::vector<int>> samurottAnimationAtlas = {
+    std::map<Direction, std::vector<int>> arceusAnimationAtlas = {
         {IDLING, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}},
         {LEFT, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}},
         {UP, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}},
@@ -59,7 +60,7 @@ void LevelC::initialise()
 
     // Assets from @see https://sscary.itch.io/the-adventurer-female
     mGameState.pokeTrainer = new Entity(
-        {mOrigin.x - 250.0f, mOrigin.y + 200}, // position
+        {mOrigin.x - 200.0f, mOrigin.y + 200}, // position
         {75.0f, 75.0f},                        // scale
         "assets/game/trainersprites.png",      // texture file address
         ATLAS,                                 // single image or atlas?
@@ -67,23 +68,23 @@ void LevelC::initialise()
         pokeTrainerAnimationAtlas,             // actual atlas
         PLAYER                                 // entity type
     );
-    mGameState.samurott = new Entity(
+    mGameState.arceus = new Entity(
         {mOrigin.x - 350.0f, mOrigin.y - 800.0f}, // position
         {150.0f, 150.0f},                         // scale
-        "assets/game/samurott.png",               // texture file address
+        "assets/game/Arceus.png",                 // texture file address
         ATLAS,
-        {8, 4},                 // single image or atlas?                            // atlas dimensions
-        samurottAnimationAtlas, // actual atlas
-        NPC                     // entity type
+        {8, 6},               // single image or atlas?                            // atlas dimensions
+        arceusAnimationAtlas, // actual atlas
+        NPC                   // entity type
     );
     mGameState.BG1 = new Entity(
-        {mOrigin.x - 300, mOrigin.y},    // position
-        {2200, 1000},                    // scale
-        "assets/game/cavewaterfall.png", // texture file address
+        {mOrigin.x - 300, mOrigin.y}, // position
+        {1000, 1000},                 // scale
+        "assets/game/temple.png",     // texture file address
         SINGLE,
-        {1, 1},                 // single image or atlas?                            // atlas dimensions
-        samurottAnimationAtlas, // actual atlas
-        BLOCK                   // entity type
+        {1, 1},               // single image or atlas?                            // atlas dimensions
+        arceusAnimationAtlas, // actual atlas
+        BLOCK                 // entity type
     );
     mGameState.pokeBall = new Entity(
         {mOrigin.x - 300, mOrigin.y}, // position
@@ -101,21 +102,20 @@ void LevelC::initialise()
     mGameState.pokeTrainer->setJumpingPower(600.0f);
     mGameState.pokeTrainer->setColliderDimensions({mGameState.pokeTrainer->getScale().x / 2.0f,
                                                    mGameState.pokeTrainer->getScale().y});
-    mGameState.samurott->setColliderDimensions({mGameState.samurott->getScale().x / 2, mGameState.samurott->getScale().y / 2});
-    mGameState.samurott->setAcceleration({0.0f, ACCELERATION_OF_GRAVITY});
+    mGameState.arceus->setColliderDimensions({mGameState.arceus->getScale().x / 2, mGameState.arceus->getScale().y / 6});
+    mGameState.arceus->setAcceleration({0.0f, ACCELERATION_OF_GRAVITY});
 
     mGameState.pokeTrainer->setAcceleration({0.0f, ACCELERATION_OF_GRAVITY - 300.0f});
     mGameState.pokeBall->setAcceleration({0.0f, ACCELERATION_OF_GRAVITY - 300.0f});
     mGameState.pokeBall->setColliderDimensions({mGameState.pokeBall->getScale().x / 2.0f, mGameState.pokeBall->getScale().y / 2.0f});
-    mGameState.samurott->setSpeed(20);
-    mGameState.samurott->setAIType(JUMPER);
-    mGameState.samurott->setAIState(IDLE);
+    mGameState.arceus->setSpeed(20);
+    mGameState.arceus->setAIType(HOPPER);
     mGameState.pokeTrainer->setPlayerLives(mGameState.playerLifeCount);
 
-    for (int i = 0; i < ENEMY_COUNT_3; ++i)
+    for (int i = 0; i < ENEMY_COUNT_4; ++i)
     {
-        mGameState.enemyPokemon[i] = *mGameState.samurott;
-        mGameState.enemyPokemon[i].setPosition({mOrigin.x + (i * 100.0f), mOrigin.y});
+        mGameState.enemyPokemon[i] = *mGameState.arceus;
+        mGameState.enemyPokemon[i].setPosition({mOrigin.x + 50.0f, mOrigin.y});
     }
     for (int i = 0; i < mGameState.pokeTrainer->getPlayerLives(); ++i)
     {
@@ -127,7 +127,7 @@ void LevelC::initialise()
     /**/
 }
 
-void LevelC::update(float deltaTime)
+void LevelD::update(float deltaTime)
 {
     UpdateMusicStream(mGameState.bgm);
     stageWon = true;
@@ -137,7 +137,7 @@ void LevelC::update(float deltaTime)
         nullptr,                 // player
         mGameState.map,          // map
         mGameState.enemyPokemon, // collidable entities
-        ENEMY_COUNT_3            // col. entity count
+        ENEMY_COUNT_4            // col. entity count
     );
     if (initialLives != mGameState.pokeTrainer->getPlayerLives())
     {
@@ -170,7 +170,7 @@ void LevelC::update(float deltaTime)
     }
     for (size_t index = 0; index < mGameState.pokeBalls.size(); ++index)
     {
-        mGameState.pokeBalls[index]->update(deltaTime, nullptr, mGameState.map, mGameState.enemyPokemon, ENEMY_COUNT_3);
+        mGameState.pokeBalls[index]->update(deltaTime, nullptr, mGameState.map, mGameState.enemyPokemon, ENEMY_COUNT_4);
         float pokeBallTime = GetTime() - mGameState.pokeBalls[index]->getTimer();
         if (mGameState.pokeBalls[index]->getDirection() == SPINNING && pokeBallTime >= 5.0f)
         {
@@ -183,7 +183,7 @@ void LevelC::update(float deltaTime)
             mGameState.pokeBalls[index]->setCanShake(false);
         }
     }
-    for (int i = 0; i < ENEMY_COUNT_3; ++i)
+    for (int i = 0; i < ENEMY_COUNT_4; ++i)
     {
         mGameState.enemyPokemon[i].update(deltaTime, mGameState.pokeTrainer, mGameState.map, nullptr, 0);
         if (mGameState.enemyPokemon[i].checkActive() == ACTIVE)
@@ -196,13 +196,13 @@ void LevelC::update(float deltaTime)
         mGameState.playerLives[i].setPosition({mGameState.pokeTrainer->getPosition().x - 50.0f + (i * 50.0f),
                                                mGameState.pokeTrainer->getPosition().y - 100.0f});
     }
-    if (stageWon)
+    if (GetTime() - levelTimer >= 10.0f)
     {
-        changeScene(4);
+        changeScene(6);
     }
 }
 
-void LevelC::render()
+void LevelD::render()
 {
     ClearBackground(ColorFromHex(mBGColourHexCode));
 
@@ -213,7 +213,7 @@ void LevelC::render()
     {
         mGameState.pokeBalls[index]->render();
     }
-    for (int i = 0; i < ENEMY_COUNT_3; ++i)
+    for (int i = 0; i < ENEMY_COUNT_4; ++i)
     {
         mGameState.enemyPokemon[i].render();
     }
@@ -223,11 +223,11 @@ void LevelC::render()
     }
 }
 
-void LevelC::shutdown()
+void LevelD::shutdown()
 {
     delete mGameState.BG1;
     delete mGameState.pokeTrainer;
-    delete mGameState.samurott;
+    delete mGameState.arceus;
     delete mGameState.map;
     for (size_t index = 0; index < mGameState.pokeBalls.size(); ++index)
     {
