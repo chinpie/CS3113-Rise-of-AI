@@ -12,6 +12,7 @@ void LevelD::initialise()
     mGameState.enemyPokemon = new Entity[ENEMY_COUNT_4];
     mGameState.pokeBalls.clear();
     mGameState.throwPokeBall = false;
+    mGameState.thwomp = LoadSound("assets/game/thwomp.mp3");
 
     mGameState.bgm = LoadMusicStream("assets/game/Oninous.mp3");
     SetMusicVolume(mGameState.bgm, 1.0f);
@@ -133,11 +134,11 @@ void LevelD::update(float deltaTime)
     stageWon = true;
 
     mGameState.pokeTrainer->update(
-        deltaTime,               // delta time / fixed timestep~
-        nullptr,                 // player
-        mGameState.map,          // map
-        mGameState.enemyPokemon, // collidable entities
-        ENEMY_COUNT_4            // col. entity count
+        deltaTime,      // delta time / fixed timestep~
+        nullptr,        // player
+        mGameState.map, // map
+        nullptr,        // collidable entities
+        0               // col. entity count
     );
     if (initialLives != mGameState.pokeTrainer->getPlayerLives())
     {
@@ -196,6 +197,14 @@ void LevelD::update(float deltaTime)
         mGameState.playerLives[i].setPosition({mGameState.pokeTrainer->getPosition().x - 50.0f + (i * 50.0f),
                                                mGameState.pokeTrainer->getPosition().y - 100.0f});
     }
+    for (int i = 0; i < ENEMY_COUNT_4; ++i)
+    {
+        if (mGameState.enemyPokemon[i].isCollidingBottom())
+        {
+            PlaySound(mGameState.thwomp);
+        }
+    }
+
     if (GetTime() - levelTimer >= 10.0f)
     {
         changeScene(6);
@@ -243,4 +252,5 @@ void LevelD::shutdown()
     UnloadSound(mGameState.jumpSound);
     UnloadSound(mGameState.pokeBallShake);
     UnloadSound(mGameState.pokeCatch);
+    UnloadSound(mGameState.thwomp);
 }

@@ -17,6 +17,7 @@ struct GameState
     Music bgm;
     Sound jumpSound;
     Sound pokeCatch;
+    Sound thwomp;
     Entity *BG1;
     Entity *pokeBall;
     int nextSceneID;
